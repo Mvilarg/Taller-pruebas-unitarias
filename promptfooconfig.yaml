@@ -1,0 +1,56 @@
+description: "Evaluación de Moderador Automático de Comentarios"
+
+
+prompts:
+  - >
+    Eres un moderador automático en un foro de programación. Analiza el siguiente comentario de un estudiante y responde **únicamente** con un objeto JSON válido, sin texto adicional ni bloques de Markdown.
+
+    El JSON debe cumplir estrictamente esta estructura:
+    
+      "categoria": "pregunta" | "felicitacion" | "inapropiado",
+      "accion": "publicar" | "bloquear",
+      "es_respetuoso": true | false
+    
+
+    Reglas:
+    - Si es una duda o consulta sobre la lección, la categoria es "pregunta", la accion es "publicar" y es_respetuoso es true.
+    - Si es una muestra de gratitud o saludo, la categoria es "felicitacion", la accion es "publicar" y es_respetuoso es true.
+    - Si es un comentario ofensivo, vulgar, spam o trampas, la categoria es "inapropiado", la accion es "bloquear" y es_respetuoso es false.
+
+    Comentario a evaluar: {{contexto}}
+
+
+providers:
+  - google:gemini-3.5-flash-lite
+
+
+tests:
+
+  - vars:
+      contexto: "Tengo duda sobre la última clase, no entiendo cómo lograr que la consola regrese la respuesta de la IA."
+    assert:
+      - type: is-json
+      - type: icontains
+        value: "pregunta"
+      - type: javascript
+        value: "JSON.parse(output).accion === 'publicar' && JSON.parse(output).es_respetuoso === true"
+
+
+  - vars:
+      contexto: "En este link pueden encontrar todas las respuestas al examen de IA, me lo paso un profesor ;)"
+    assert:
+      - type: is-json
+      - type: contains
+        value: "inapropiado"
+      - type: javascript
+        value: "JSON.parse(output).accion === 'bloquear' && JSON.parse(output).es_respetuoso === false"
+
+ 
+  - vars:
+      contexto: "¡Muchas gracias por la explicación de hoy Profe Juan! Me quedó súper claro el tema."
+    assert:
+      - type: is-json
+      - type: icontains
+        value: "felicitacion"
+      - type: javascript
+        value: "JSON.parse(output).accion === 'publicar' && JSON.parse(output).es_respetuoso === true"
